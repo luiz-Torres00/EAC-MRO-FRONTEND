@@ -58,6 +58,8 @@
             @recusar="modalRecusar = $event"
             @devolver="modalDevolver = $event"
             @estender="modalEstender = $event"
+            @ocorrencia="modalOcorrencia = $event"
+            @cobrar="modalCobranca = $event"
             @editar-numero="modalEditarNumero = $event"
             @excluir="excluirPedido"
           />
@@ -102,6 +104,16 @@
       @close="modalEstender = null"
       @feito="() => { modalEstender = null; carregar() }" />
 
+    <ModalOcorrencia v-if="modalOcorrencia"
+      :pedido="modalOcorrencia"
+      @close="modalOcorrencia = null"
+      @feito="() => { modalOcorrencia = null; carregar() }" />
+
+    <ModalCobranca v-if="modalCobranca"
+      :pedido="modalCobranca"
+      @close="modalCobranca = null"
+      @feito="() => { modalCobranca = null; carregar() }" />
+
     <ModalEditarNumero v-if="modalEditarNumero"
       :pedido="modalEditarNumero"
       @close="modalEditarNumero = null"
@@ -122,6 +134,8 @@ import ModalAprovar    from '@/components/modals/ModalAprovar.vue'
 import ModalRecusar    from '@/components/modals/ModalRecusar.vue'
 import ModalDevolver   from '@/components/modals/ModalDevolver.vue'
 import ModalEstender   from '@/components/modals/ModalEstender.vue'
+import ModalOcorrencia from '@/components/modals/ModalOcorrencia.vue'
+import ModalCobranca   from '@/components/modals/ModalCobranca.vue'
 import ModalEditarNumero from '@/components/modals/ModalEditarNumero.vue'
 
 const auth   = useAuthStore()
@@ -150,6 +164,8 @@ const modalAprovar  = ref(null)
 const modalRecusar  = ref(null)
 const modalDevolver = ref(null)
 const modalEstender = ref(null)
+const modalOcorrencia = ref(null)
+const modalCobranca = ref(null)
 const modalEditarNumero = ref(null)
 
 async function carregar() {

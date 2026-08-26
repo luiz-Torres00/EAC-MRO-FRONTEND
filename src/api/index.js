@@ -69,6 +69,8 @@ export const pedidosApi = {
   recusar:  (id, dados)  => api.patch(`/pedidos/${id}/recusar/`, dados),
   devolver: (id, dados)  => api.patch(`/pedidos/${id}/devolver/`, dados),
   estender: (id, dados)  => api.patch(`/pedidos/${id}/estender/`, dados),
+  abrirOcorrencia: (id, dados) => api.patch(`/pedidos/${id}/ocorrencia/`, dados),
+  cobrarDevolucao: (id, dados) => api.post(`/pedidos/${id}/cobrar/`, dados),
   relatorioXlsx: (params) => api.get('/pedidos/relatorio/', { params, responseType: 'blob' }),
 }
 

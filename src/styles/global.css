@@ -482,6 +482,8 @@ body {
 .modal.modal-recusar { border-top-color: var(--red); }
 .modal.modal-detalhe { border-top-color: var(--azul-soft); max-width: 640px; }
 .modal.modal-estender { border-top-color: var(--indigo); max-width: 620px; }
+.modal.modal-ocorrencia { border-top-color: var(--red); max-width: 560px; }
+.modal.modal-cobranca   { border-top-color: var(--red); max-width: 640px; }
 
 .modal-header {
   padding: 20px 24px 16px;

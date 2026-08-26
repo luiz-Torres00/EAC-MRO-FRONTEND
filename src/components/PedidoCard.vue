@@ -83,6 +83,12 @@
       <button v-if="auth.perm('eac_estender') && p.status === 'aprovado'"
         class="btn btn-ghost btn-sm" @click="emit('estender', p)">📅 Estender</button>
 
+      <button v-if="auth.perm('eac_devolver') && !['recusado','cancelado'].includes(p.status)"
+        class="btn btn-red btn-sm" @click="emit('ocorrencia', p)">⚠️ Abrir ocorrência</button>
+
+      <button v-if="auth.perm('eac_devolver') && atrasado"
+        class="btn btn-red btn-sm" @click="emit('cobrar', p)" title="Só disponível quando o pedido está em atraso">🔔 Cobrar devolução</button>
+
       <button class="btn btn-ghost btn-sm" @click="emit('editarNumero', p)" title="Só o número do pedido pode ser editado depois de criado">
         ✎ Nº pedido
       </button>
@@ -103,7 +109,7 @@
 import { computed } from 'vue'
 
 const props = defineProps({ p: Object, auth: Object })
-const emit  = defineEmits(['detalhe','aprovar','recusar','devolver','estender','editarNumero','excluir'])
+const emit  = defineEmits(['detalhe','aprovar','recusar','devolver','estender','ocorrencia','cobrar','editarNumero','excluir'])
 
 const STATUS_LABEL = {
   pendente: 'Aguardando aprovação', aprovado: 'Aprovado / Liberado',
@@ -147,4 +153,12 @@ const diasCls = computed(() => {
   return 'ok'
 })
 const materiais = computed(() => Array.isArray(props.p.materiais) ? props.p.materiais : [])
+
+// "Cobrar devolução" só faz sentido (e só é aceito pelo backend) quando o
+// pedido ainda está em posse de alguém e o prazo já passou — mesma regra
+// aplicada em CobrarDevolucaoView.post().
+const atrasado = computed(() =>
+  dias.value !== null && dias.value < 0 &&
+  ['aprovado', 'aguardando_devolucao'].includes(props.p.status)
+)
 </script>

@@ -4,12 +4,7 @@
     <!-- ── Login ── -->
     <div v-if="tab === 'login'" class="login-card">
       <div class="login-logo">
-        <span class="login-logo-mr">MR</span>
-        <svg class="login-logo-o" viewBox="0 0 28 28" fill="none">
-          <circle cx="14" cy="14" r="12" fill="#00ce7c"/>
-          <circle cx="14" cy="14" r="7" fill="var(--card)"/>
-          <circle cx="14" cy="14" r="2.8" fill="white"/>
-        </svg>
+        <img class="login-logo-img" :src="logoUrl" alt="MRO" />
       </div>
       <div class="login-tagline">nós ativamos a <strong>eficiência</strong></div>
       <div class="login-titulo">Entrar no sistema</div>
@@ -113,13 +108,21 @@
 </template>
 
 <script setup>
-import { ref, reactive } from 'vue'
+import { ref, reactive, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { authApi } from '@/api'
+import { useTheme } from '@/composables/useTheme'
+import logoMroDarkUrl from '@/assets/logo-mro.png'
+import logoMroLightUrl from '@/assets/logo-mro-light.png'
 
 const auth   = useAuthStore()
 const router = useRouter()
+
+// Mesma logo com fundo transparente usada na sidebar - clara no tema claro,
+// escura (texto branco) no tema escuro, pra nao sumir contra o fundo.
+const { theme: temaLogo } = useTheme()
+const logoUrl = computed(() => temaLogo.value === 'light' ? logoMroLightUrl : logoMroDarkUrl)
 
 const tab   = ref('login')
 const email = ref('')

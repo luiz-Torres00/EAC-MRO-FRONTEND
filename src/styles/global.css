@@ -806,20 +806,14 @@ body.light .field textarea { background: #f5f7fc; border-color: #dde2f0; color: 
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 2px;
   margin-bottom: 6px;
 }
-.login-logo-mr {
-  font-family: var(--font);
-  font-size: 32px;
-  font-weight: 900;
-  color: #fff;
-  letter-spacing: -.01em;
-  line-height: 1;
-}
-.login-logo-o {
-  width: 32px;
-  height: 32px;
+.login-logo-img {
+  display: block;
+  height: 42px;
+  max-width: 220px;
+  width: auto;
+  object-fit: contain;
 }
 .login-tagline {
   font-size: 10px;

@@ -676,6 +676,18 @@ select option { background: var(--card); }
 .tabela td { padding: 10px 12px; border-bottom: 1px solid var(--border-s); color: var(--text); font-weight: 500; }
 .tabela tr:hover td { background: var(--surface); }
 
+/* ══ ELEMENTOS CLICÁVEIS (Dashboard/Relatórios → Empréstimos filtrado) ══ */
+.clicavel { cursor: pointer; }
+.tabela tr.clicavel:hover td { background: var(--surface); }
+.kpi-card.clicavel {
+  transition: transform var(--dur) var(--ease), box-shadow var(--dur) var(--ease), border-color var(--dur) var(--ease);
+}
+.kpi-card.clicavel:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+  border-color: var(--verde);
+}
+
 /* ══ USUÁRIO CARD ══ */
 .usuario-card {
   background: var(--card); border: 1px solid var(--border-s);

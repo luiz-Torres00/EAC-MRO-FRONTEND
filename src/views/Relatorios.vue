@@ -24,7 +24,7 @@
           >
             📅 {{ intervaloAtivo ? fmtData(dataInicio) + ' – ' + fmtData(dataFim) : 'Selecionar data' }}
           </button>
-          <div v-if="mostrarCalendario" style="position:absolute;top:calc(100% + 6px);left:0;z-index:40;width:280px">
+          <div v-if="mostrarCalendario" style="position:absolute;top:calc(100% + 6px);right:0;z-index:40;width:280px;max-width:calc(100vw - 40px)">
             <CalendarioRange v-model:inicio="dataInicio" v-model:fim="dataFim" />
             <div style="margin-top:6px;display:flex;justify-content:flex-end">
               <button class="btn btn-primary btn-sm" @click="mostrarCalendario = false">Fechar</button>
@@ -47,23 +47,25 @@
     <div v-else>
       <!-- KPIs -->
       <div class="kpi-row">
-        <div class="kpi-card">
+        <div class="kpi-card clicavel" title="Ver todos os pedidos" @click="irEmprestimos({})">
           <div class="kpi-label">Total de pedidos</div>
           <div class="kpi-value" style="color:var(--text)">{{ stats.total }}</div>
         </div>
-        <div class="kpi-card">
+        <div class="kpi-card clicavel" title="Ver pedidos aprovados, aguardando devolução ou devolvidos"
+          @click="irEmprestimos({ status: 'aprovado,aguardando_devolucao,devolvido' })">
           <div class="kpi-label">Aprovados</div>
           <div class="kpi-value verde">{{ stats.aprovados }}</div>
         </div>
-        <div class="kpi-card">
+        <div class="kpi-card clicavel" title="Ver pedidos aguardando devolução"
+          @click="irEmprestimos({ status: 'aguardando_devolucao' })">
           <div class="kpi-label">Aguardando devolução</div>
           <div class="kpi-value indigo">{{ stats.aguardando }}</div>
         </div>
-        <div class="kpi-card">
+        <div class="kpi-card clicavel" title="Ver pedidos recusados" @click="irEmprestimos({ status: 'recusado' })">
           <div class="kpi-label">Recusados</div>
           <div class="kpi-value red">{{ stats.recusados }}</div>
         </div>
-        <div class="kpi-card">
+        <div class="kpi-card clicavel" title="Ver pedidos com ocorrência" @click="irEmprestimos({ ocorrencia: '1' })">
           <div class="kpi-label">Com ocorrência</div>
           <div class="kpi-value amber">{{ stats.ocorrencias }}</div>
         </div>
@@ -82,7 +84,8 @@
               </tr>
             </thead>
             <tbody>
-              <tr v-for="s in stats.porSetor" :key="s.setor">
+              <tr v-for="s in stats.porSetor" :key="s.setor" class="clicavel" title="Ver pedidos desse MG"
+                @click="irEmprestimos({ mg: s.setor || '(sem MG)' })">
                 <td>{{ s.setor || '—' }}</td>
                 <td style="text-align:right;font-weight:700">{{ s.total }}</td>
               </tr>
@@ -102,7 +105,10 @@
               </tr>
             </thead>
             <tbody>
-              <tr v-for="p in stats.porProduto.slice(0, 10)" :key="p.produto">
+              <tr v-for="p in stats.porProduto.slice(0, 10)" :key="p.produto"
+                :class="{ clicavel: p.produto !== '(sem produto)' }"
+                :title="p.produto !== '(sem produto)' ? 'Ver pedidos desse material' : ''"
+                @click="p.produto !== '(sem produto)' && irEmprestimos({ busca: p.produto })">
                 <td>{{ p.produto }}</td>
                 <td style="text-align:right;font-weight:700">{{ p.total }}</td>
               </tr>
@@ -117,7 +123,10 @@
             <div
               v-for="item in statusDist"
               :key="item.label"
+              class="clicavel"
+              :title="'Ver pedidos ' + item.label.toLowerCase()"
               style="display:flex;align-items:center;gap:10px"
+              @click="irEmprestimos({ status: item.key })"
             >
               <span :class="['status-badge', 'status-' + item.key]" style="min-width:120px;justify-content:center">
                 {{ item.label }}
@@ -186,8 +195,10 @@
                 <div
                   v-for="o in stats.ocorrenciasRecentes"
                   :key="o.id"
-                  class="ocorrencia-box"
+                  class="ocorrencia-box clicavel"
+                  title="Ver pedido"
                   style="margin-bottom:0"
+                  @click="irEmprestimos({ pedido: o.id })"
                 >
                   <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
                     <div>
@@ -213,8 +224,17 @@
 
 <script setup>
 import { ref, computed, watch, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { pedidosApi } from '@/api'
 import CalendarioRange from '@/components/CalendarioRange.vue'
+
+const router = useRouter()
+
+// Leva pra tela de Empréstimos já filtrada pelo critério clicado (status,
+// MG, busca por nome/produto, um pedido específico ou os com ocorrência).
+function irEmprestimos(query) {
+  router.push({ path: '/', query })
+}
 
 const periodo  = ref('30')
 const loading  = ref(false)

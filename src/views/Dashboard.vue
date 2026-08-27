@@ -25,7 +25,7 @@
           >
             📅 {{ intervaloAtivo ? fmtData(dataInicio) + ' – ' + fmtData(dataFim) : 'Selecionar data' }}
           </button>
-          <div v-if="mostrarCalendario" style="position:absolute;top:calc(100% + 6px);left:0;z-index:40;width:280px">
+          <div v-if="mostrarCalendario" style="position:absolute;top:calc(100% + 6px);right:0;z-index:40;width:280px;max-width:calc(100vw - 40px)">
             <CalendarioRange v-model:inicio="dataInicio" v-model:fim="dataFim" />
             <div style="margin-top:6px;display:flex;justify-content:flex-end">
               <button class="btn btn-primary btn-sm" @click="mostrarCalendario = false">Fechar</button>
@@ -45,23 +45,25 @@
     <div v-else>
       <!-- KPIs -->
       <div class="kpi-row">
-        <div class="kpi-card">
+        <div class="kpi-card clicavel" title="Ver todos os pedidos" @click="irEmprestimos({})">
           <div class="kpi-label">Total de pedidos</div>
           <div class="kpi-value" style="color:var(--text)">{{ kpi.total }}</div>
         </div>
-        <div class="kpi-card">
+        <div class="kpi-card clicavel" title="Ver empréstimos aprovados ou aguardando devolução"
+          @click="irEmprestimos({ status: 'aprovado,aguardando_devolucao' })">
           <div class="kpi-label">Empréstimos ativos</div>
           <div class="kpi-value indigo">{{ kpi.ativos }}</div>
         </div>
-        <div class="kpi-card">
+        <div class="kpi-card clicavel" title="Ver empréstimos atrasados" @click="irEmprestimos({ atrasado: '1' })">
           <div class="kpi-label">Atrasados agora</div>
           <div class="kpi-value red">{{ kpi.atrasados }}</div>
         </div>
-        <div class="kpi-card">
+        <div class="kpi-card clicavel" title="Ver pedidos aprovados, aguardando devolução ou devolvidos"
+          @click="irEmprestimos({ status: 'aprovado,aguardando_devolucao,devolvido' })">
           <div class="kpi-label">Taxa de aprovação</div>
           <div class="kpi-value verde">{{ kpi.taxaAprovacao }}%</div>
         </div>
-        <div class="kpi-card">
+        <div class="kpi-card clicavel" title="Ver pedidos devolvidos" @click="irEmprestimos({ status: 'devolvido' })">
           <div class="kpi-label">Tempo médio de devolução</div>
           <div class="kpi-value amber">{{ kpi.tempoMedioDias }}d</div>
         </div>
@@ -103,7 +105,10 @@
             <table class="tabela">
               <thead><tr><th>Solicitante</th><th style="text-align:right">Pedidos</th></tr></thead>
               <tbody>
-                <tr v-for="r in ranking.solicitantes" :key="r.nome">
+                <tr v-for="r in ranking.solicitantes" :key="r.nome"
+                  :class="{ clicavel: r.nome !== '(sem nome)' }"
+                  :title="r.nome !== '(sem nome)' ? 'Ver pedidos de ' + r.nome : ''"
+                  @click="r.nome !== '(sem nome)' && irEmprestimos({ busca: r.nome })">
                   <td>{{ r.nome }}</td>
                   <td style="text-align:right;font-weight:700">{{ r.total }}</td>
                 </tr>
@@ -119,7 +124,10 @@
             <table class="tabela">
               <thead><tr><th>Concedente</th><th style="text-align:right">Pedidos</th></tr></thead>
               <tbody>
-                <tr v-for="r in ranking.concedentes" :key="r.nome">
+                <tr v-for="r in ranking.concedentes" :key="r.nome"
+                  :class="{ clicavel: r.nome !== '(sem nome)' }"
+                  :title="r.nome !== '(sem nome)' ? 'Ver pedidos de ' + r.nome : ''"
+                  @click="r.nome !== '(sem nome)' && irEmprestimos({ busca: r.nome })">
                   <td>{{ r.nome }}</td>
                   <td style="text-align:right;font-weight:700">{{ r.total }}</td>
                 </tr>
@@ -140,7 +148,8 @@
                 </tr>
               </thead>
               <tbody>
-                <tr v-for="p in atrasados" :key="p.id">
+                <tr v-for="p in atrasados" :key="p.id" class="clicavel" title="Ver pedido"
+                  @click="irEmprestimos({ pedido: p.id })">
                   <td>{{ p.produto }}</td>
                   <td>{{ p.solicitante_nome }} → {{ p.concedente_nome }}</td>
                   <td>{{ p.mg_concedente || p.mg_solicitante || '—' }}</td>
@@ -158,9 +167,18 @@
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
+import { useRouter } from 'vue-router'
 import { pedidosApi } from '@/api'
 import Chart from 'chart.js/auto'
 import CalendarioRange from '@/components/CalendarioRange.vue'
+
+const router = useRouter()
+
+// Leva pra tela de Empréstimos já filtrada pelo critério clicado (status,
+// MG, busca por nome/produto, um pedido específico ou os atrasados).
+function irEmprestimos(query) {
+  router.push({ path: '/', query })
+}
 
 const periodo  = ref('30')
 const loading  = ref(false)
@@ -318,7 +336,15 @@ function desenharGraficos() {
       labels: statusKeys.map(k => LABEL_STATUS[k]),
       datasets: [{ data: statusData, backgroundColor: statusKeys.map(k => CORES_STATUS[k]) }],
     },
-    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10 } } } } },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10 } } } },
+      onHover: (evt, els) => { evt.native.target.style.cursor = els.length ? 'pointer' : 'default' },
+      onClick: (evt, els) => {
+        if (!els.length) return
+        irEmprestimos({ status: statusKeys[els[0].index] })
+      },
+    },
   })
 
   // Por MG
@@ -332,7 +358,14 @@ function desenharGraficos() {
   chartMg = new Chart(canvasMg.value, {
     type: 'bar',
     data: { labels: mgKeys, datasets: [{ label: 'Pedidos', data: mgKeys.map(k => porMg[k]), backgroundColor: '#6b82c4' }] },
-    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } },
+    options: {
+      responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } },
+      onHover: (evt, els) => { evt.native.target.style.cursor = els.length ? 'pointer' : 'default' },
+      onClick: (evt, els) => {
+        if (!els.length) return
+        irEmprestimos({ mg: mgKeys[els[0].index] })
+      },
+    },
   })
 
   // Top materiais
@@ -343,7 +376,15 @@ function desenharGraficos() {
   chartMateriais = new Chart(canvasMateriais.value, {
     type: 'bar',
     data: { labels: topProd.map(p => p[0]), datasets: [{ label: 'Pedidos', data: topProd.map(p => p[1]), backgroundColor: '#00ce7c' }] },
-    options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } },
+    options: {
+      indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } },
+      onHover: (evt, els) => { evt.native.target.style.cursor = els.length ? 'pointer' : 'default' },
+      onClick: (evt, els) => {
+        if (!els.length) return
+        const nome = topProd[els[0].index][0]
+        if (nome !== '(sem produto)') irEmprestimos({ busca: nome })
+      },
+    },
   })
 }
 

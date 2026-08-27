@@ -32,6 +32,18 @@
       </div>
     </div>
 
+    <!-- Filtro que veio de um clique no Dashboard/Relatórios (MG, atrasados,
+         ocorrência ou status sem aba própria) — some sozinho ao trocar de
+         aba, mas como não tem um controle visual próprio, mostra esse chip
+         pra pessoa saber que a lista está filtrada e poder limpar. -->
+    <div v-if="filtroExtraDescricao" style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+      <span style="display:inline-flex;align-items:center;gap:6px;background:var(--surface);border:1px solid var(--border-s);border-radius:99px;padding:4px 6px 4px 12px;font-size:11px;font-weight:600;color:var(--text)">
+        Filtro: {{ filtroExtraDescricao }}
+        <button type="button" @click="limparFiltroExtra"
+          style="background:transparent;border:none;color:var(--muted);cursor:pointer;font-size:13px;padding:2px 6px;line-height:1">✕</button>
+      </span>
+    </div>
+
     <!-- ── Loading / Erro ── -->
     <div v-if="loading" class="loading-full">
       <div style="text-align:center"><div style="font-size:24px;margin-bottom:8px">🔄</div>Carregando pedidos…</div>
@@ -199,25 +211,120 @@ async function excluirPedido(p) {
   }
 }
 
+// Os 4 status abaixo já têm aba própria — um clique vindo do Dashboard/
+// Relatórios pra um desses só troca de aba (reaproveita o filtro que já
+// existe). Os demais (aguardando_devolucao, cancelado, ou combinações tipo
+// "ativos" = aprovado + aguardando_devolucao) não têm aba dedicada, então
+// usam o filtro avulso abaixo.
+const STATUS_PARA_ABA = {
+  pendente: 'Pendentes', aprovado: 'Aprovados',
+  devolvido: 'Devoluções', recusado: 'Recusados',
+}
+const LABEL_STATUS = {
+  pendente: 'Pendente', aprovado: 'Aprovado', aguardando_devolucao: 'Ag. devolução',
+  devolvido: 'Devolvido', recusado: 'Recusado', cancelado: 'Cancelado',
+}
+
+const statusFiltroExtra     = ref([])   // ?status= sem aba própria
+const mgFiltroExtra         = ref('')   // ?mg=
+const atrasadoFiltroExtra   = ref(false) // ?atrasado=1
+const ocorrenciaFiltroExtra = ref(false) // ?ocorrencia=1
+
+function limparFiltroExtra() {
+  statusFiltroExtra.value = []
+  mgFiltroExtra.value = ''
+  atrasadoFiltroExtra.value = false
+  ocorrenciaFiltroExtra.value = false
+}
+
+const filtroExtraDescricao = computed(() => {
+  const partes = []
+  if (statusFiltroExtra.value.length) {
+    partes.push(statusFiltroExtra.value.map(s => LABEL_STATUS[s] || s).join(' + '))
+  }
+  if (mgFiltroExtra.value) partes.push('MG: ' + mgFiltroExtra.value)
+  if (atrasadoFiltroExtra.value) partes.push('Atrasados')
+  if (ocorrenciaFiltroExtra.value) partes.push('Com ocorrência')
+  return partes.join(' · ')
+})
+
 onMounted(async () => {
   await carregar()
+
+  const q = route.query
+  let veioDeLink = false
+
   // Veio de um clique numa notificação (ver Notificacoes.vue) — abre o
   // detalhe do pedido relacionado direto, mesmo que ele não esteja na
-  // página atual da lista.
-  const pedidoId = route.query.pedido
-  if (pedidoId) {
+  // página atual da lista. Também usado pelos links "ver pedido" do
+  // Dashboard/Relatórios (ex: linha de um atraso ou de uma ocorrência).
+  if (q.pedido) {
     try {
-      const { data } = await pedidosApi.detalhe(pedidoId)
+      const { data } = await pedidosApi.detalhe(q.pedido)
       modalDetalhe.value = data
     } catch { /* pedido pode ter sido removido — ignora */ }
-    router.replace({ path: '/' })
+    veioDeLink = true
   }
+
+  // Veio de um clique no Dashboard/Relatórios — reaplica o mesmo filtro
+  // aqui, contra os dados reais da lista de Empréstimos.
+  if (q.busca) {
+    busca.value = String(q.busca)
+    veioDeLink = true
+  }
+  if (q.status) {
+    const statuses = String(q.status).split(',').filter(Boolean)
+    if (statuses.length === 1 && STATUS_PARA_ABA[statuses[0]]) {
+      tab.value = STATUS_PARA_ABA[statuses[0]]
+    } else if (statuses.length) {
+      statusFiltroExtra.value = statuses
+    }
+    veioDeLink = true
+  }
+  if (q.mg) {
+    mgFiltroExtra.value = String(q.mg)
+    veioDeLink = true
+  }
+  if (q.atrasado) {
+    atrasadoFiltroExtra.value = true
+    veioDeLink = true
+  }
+  if (q.ocorrencia) {
+    ocorrenciaFiltroExtra.value = true
+    veioDeLink = true
+  }
+
+  if (veioDeLink) router.replace({ path: '/' })
 })
 
 const pedidosFiltrados = computed(() => {
   let lista = todosPedidos.value
-  const statusFiltro = TAB_STATUS[tab.value]
-  if (statusFiltro) lista = lista.filter(p => p.status === statusFiltro)
+
+  if (statusFiltroExtra.value.length) {
+    lista = lista.filter(p => statusFiltroExtra.value.includes(p.status))
+  } else {
+    const statusFiltro = TAB_STATUS[tab.value]
+    if (statusFiltro) lista = lista.filter(p => p.status === statusFiltro)
+  }
+
+  if (mgFiltroExtra.value) {
+    lista = mgFiltroExtra.value === '(sem MG)'
+      ? lista.filter(p => !p.mg_concedente && !p.mg_solicitante)
+      : lista.filter(p => (p.mg_concedente || p.mg_solicitante) === mgFiltroExtra.value)
+  }
+
+  if (atrasadoFiltroExtra.value) {
+    const agora = new Date()
+    lista = lista.filter(p =>
+      ['aprovado', 'aguardando_devolucao'].includes(p.status) &&
+      p.dev_iso && new Date(p.dev_iso) < agora
+    )
+  }
+
+  if (ocorrenciaFiltroExtra.value) {
+    lista = lista.filter(p => !!p.ocorrencia)
+  }
+
   if (busca.value) {
     const q = busca.value.toLowerCase()
     lista = lista.filter(p =>
@@ -255,6 +362,9 @@ const pedidosPagina = computed(() => {
 function mudarTab(t) {
   tab.value   = t
   pagina.value = 1
+  // Troca manual de aba encerra qualquer filtro que tenha vindo de um link
+  // do Dashboard/Relatórios — evita um filtro invisível ficar preso na lista.
+  limparFiltroExtra()
 }
 
 watch([busca, itensPorPagina], () => { pagina.value = 1 })

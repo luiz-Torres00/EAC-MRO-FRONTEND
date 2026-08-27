@@ -68,6 +68,7 @@ export const pedidosApi = {
   aprovar:  (id, dados)  => api.patch(`/pedidos/${id}/aprovar/`, dados),
   recusar:  (id, dados)  => api.patch(`/pedidos/${id}/recusar/`, dados),
   devolver: (id, dados)  => api.patch(`/pedidos/${id}/devolver/`, dados),
+  confirmarDevolucao: (id, dados) => api.patch(`/pedidos/${id}/confirmar-devolucao/`, dados),
   estender: (id, dados)  => api.patch(`/pedidos/${id}/estender/`, dados),
   abrirOcorrencia: (id, dados) => api.patch(`/pedidos/${id}/ocorrencia/`, dados),
   cobrarDevolucao: (id, dados) => api.post(`/pedidos/${id}/cobrar/`, dados),

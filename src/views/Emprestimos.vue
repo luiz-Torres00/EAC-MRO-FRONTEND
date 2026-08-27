@@ -57,6 +57,7 @@
             @aprovar="modalAprovar = $event"
             @recusar="modalRecusar = $event"
             @devolver="modalDevolver = $event"
+            @confirmar-devolucao="modalConfirmarDevolucao = $event"
             @estender="modalEstender = $event"
             @ocorrencia="modalOcorrencia = $event"
             @cobrar="modalCobranca = $event"
@@ -99,6 +100,11 @@
       @close="modalDevolver = null"
       @feito="() => { modalDevolver = null; carregar() }" />
 
+    <ModalConfirmarDevolucao v-if="modalConfirmarDevolucao"
+      :pedido="modalConfirmarDevolucao"
+      @close="modalConfirmarDevolucao = null"
+      @feito="() => { modalConfirmarDevolucao = null; carregar() }" />
+
     <ModalEstender v-if="modalEstender"
       :pedido="modalEstender"
       @close="modalEstender = null"
@@ -133,6 +139,7 @@ import ModalDetalhe    from '@/components/modals/ModalDetalhe.vue'
 import ModalAprovar    from '@/components/modals/ModalAprovar.vue'
 import ModalRecusar    from '@/components/modals/ModalRecusar.vue'
 import ModalDevolver   from '@/components/modals/ModalDevolver.vue'
+import ModalConfirmarDevolucao from '@/components/modals/ModalConfirmarDevolucao.vue'
 import ModalEstender   from '@/components/modals/ModalEstender.vue'
 import ModalOcorrencia from '@/components/modals/ModalOcorrencia.vue'
 import ModalCobranca   from '@/components/modals/ModalCobranca.vue'
@@ -163,6 +170,7 @@ const modalDetalhe  = ref(null)
 const modalAprovar  = ref(null)
 const modalRecusar  = ref(null)
 const modalDevolver = ref(null)
+const modalConfirmarDevolucao = ref(null)
 const modalEstender = ref(null)
 const modalOcorrencia = ref(null)
 const modalCobranca = ref(null)

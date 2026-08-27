@@ -77,8 +77,11 @@
         <button class="btn btn-red btn-sm"   @click="emit('recusar', p)">✕ Recusar</button>
       </template>
 
-      <button v-if="(isMeCon || auth?.user?.is_staff) && ['aprovado','aguardando_devolucao'].includes(p.status)"
-        class="btn btn-amber btn-sm" @click="emit('devolver', p)" title="Só quem emprestou o material pode registrar a devolução">↩ Devolver</button>
+      <button v-if="(isMeSol || auth?.user?.is_staff) && p.status === 'aprovado'"
+        class="btn btn-amber btn-sm" @click="emit('devolver', p)" title="Só quem solicitou o material pode registrar a devolução">↩ Registrar devolução</button>
+
+      <button v-if="(isMeCon || auth?.user?.is_staff) && p.status === 'aguardando_devolucao'"
+        class="btn btn-green btn-sm" @click="emit('confirmarDevolucao', p)" title="Confirme depois de conferir o material devolvido">✓ Confirmar devolução</button>
 
       <button v-if="auth.perm('eac_estender') && p.status === 'aprovado'"
         class="btn btn-ghost btn-sm" @click="emit('estender', p)">📅 Estender</button>
@@ -109,7 +112,7 @@
 import { computed } from 'vue'
 
 const props = defineProps({ p: Object, auth: Object })
-const emit  = defineEmits(['detalhe','aprovar','recusar','devolver','estender','ocorrencia','cobrar','editarNumero','excluir'])
+const emit  = defineEmits(['detalhe','aprovar','recusar','devolver','confirmarDevolucao','estender','ocorrencia','cobrar','editarNumero','excluir'])
 
 const STATUS_LABEL = {
   pendente: 'Aguardando aprovação', aprovado: 'Aprovado / Liberado',
@@ -154,11 +157,12 @@ const diasCls = computed(() => {
 })
 const materiais = computed(() => Array.isArray(props.p.materiais) ? props.p.materiais : [])
 
-// "Cobrar devolução" só faz sentido (e só é aceito pelo backend) quando o
-// pedido ainda está em posse de alguém e o prazo já passou — mesma regra
-// aplicada em CobrarDevolucaoView.post().
+// "Cobrar devolução" só faz sentido (e só é aceito pelo backend) enquanto o
+// material ainda está com o solicitante e o prazo já passou — uma vez que
+// a devolução foi registrada (aguardando_devolucao) não há mais o que
+// cobrar, só falta o concedente confirmar. Mesma regra em CobrarDevolucaoView.post().
 const atrasado = computed(() =>
   dias.value !== null && dias.value < 0 &&
-  ['aprovado', 'aguardando_devolucao'].includes(props.p.status)
+  props.p.status === 'aprovado'
 )
 </script>

@@ -73,7 +73,14 @@ export const pedidosApi = {
   estender: (id, dados)  => api.patch(`/pedidos/${id}/estender/`, dados),
   abrirOcorrencia: (id, dados) => api.patch(`/pedidos/${id}/ocorrencia/`, dados),
   cobrarDevolucao: (id, dados) => api.post(`/pedidos/${id}/cobrar/`, dados),
+  atualizarLocalizacao: (id, dados) => api.patch(`/pedidos/${id}/localizacao/`, dados),
   relatorioXlsx: (params) => api.get('/pedidos/relatorio/', { params, responseType: 'blob' }),
+}
+
+export const estudiosApi = {
+  listar:  (mg) => api.get('/pedidos/estudios/', { params: mg ? { mg } : {} }),
+  criar:   (dados) => api.post('/pedidos/estudios/', dados),
+  deletar: id => api.delete(`/pedidos/estudios/${id}/`),
 }
 
 export const produtosApi = {

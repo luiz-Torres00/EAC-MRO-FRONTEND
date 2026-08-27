@@ -72,6 +72,31 @@
         Ver detalhes
       </button>
 
+      <div v-if="podeEditarLocalizacao" style="position:relative;display:inline-flex">
+        <button class="btn btn-ghost btn-sm" :disabled="salvandoLocalizacao"
+          @click="localizacaoAberta = !localizacaoAberta; subEstudioAberto = false">
+          📍 {{ localizacaoLabel }}
+        </button>
+        <div v-if="localizacaoAberta"
+          style="position:absolute;top:calc(100% + 6px);left:0;z-index:40;min-width:210px;max-width:calc(100vw - 40px);background:var(--card-bg,#fff);border:1px solid var(--border,#ddd);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.15);padding:6px;display:flex;flex-direction:column;gap:2px">
+          <template v-if="!subEstudioAberto">
+            <button class="btn btn-ghost btn-sm" style="justify-content:flex-start" :disabled="salvandoLocalizacao" @click="selecionarLocalizacao('armazenagem')">📦 Armazenagem</button>
+            <button class="btn btn-ghost btn-sm" style="justify-content:flex-start" :disabled="salvandoLocalizacao" @click="selecionarLocalizacao('externa')">🚚 Externa</button>
+            <button class="btn btn-ghost btn-sm" style="justify-content:flex-start" :disabled="salvandoLocalizacao" @click="selecionarLocalizacao('cc')">🏢 CC</button>
+            <button class="btn btn-ghost btn-sm" style="justify-content:flex-start" @click="subEstudioAberto = true">🎬 Estúdio ›</button>
+            <button class="btn btn-ghost btn-sm" style="justify-content:flex-start;color:var(--texto-2,#888)" @click="localizacaoAberta = false">Fechar</button>
+          </template>
+          <template v-else>
+            <button class="btn btn-ghost btn-sm" style="justify-content:flex-start;font-weight:700" @click="subEstudioAberto = false">‹ Voltar</button>
+            <div v-if="!mgPedido" style="font-size:11px;color:var(--texto-2,#888);padding:4px 8px">Pedido sem MG definido.</div>
+            <div v-else-if="!estudiosDoMg.length" style="font-size:11px;color:var(--texto-2,#888);padding:4px 8px">Nenhum estúdio cadastrado pro {{ mgPedido }} ainda.</div>
+            <button v-for="e in estudiosDoMg" :key="e.id" class="btn btn-ghost btn-sm" style="justify-content:flex-start" :disabled="salvandoLocalizacao" @click="selecionarLocalizacao('estudio', e.id)">
+              {{ e.nome }}
+            </button>
+          </template>
+        </div>
+      </div>
+
       <template v-if="auth.perm('eac_aprovar') && p.status === 'pendente'">
         <button class="btn btn-green btn-sm" @click="emit('aprovar', p)">✓ Aprovar</button>
         <button class="btn btn-red btn-sm"   @click="emit('recusar', p)">✕ Recusar</button>
@@ -109,10 +134,11 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { ref, computed } from 'vue'
+import { pedidosApi } from '@/api'
 
-const props = defineProps({ p: Object, auth: Object })
-const emit  = defineEmits(['detalhe','aprovar','recusar','devolver','confirmarDevolucao','estender','ocorrencia','cobrar','editarNumero','excluir'])
+const props = defineProps({ p: Object, auth: Object, estudios: { type: Array, default: () => [] } })
+const emit  = defineEmits(['detalhe','aprovar','recusar','devolver','confirmarDevolucao','estender','ocorrencia','cobrar','editarNumero','excluir','atualizarPedido'])
 
 const STATUS_LABEL = {
   pendente: 'Aguardando aprovação', aprovado: 'Aprovado / Liberado',
@@ -165,4 +191,48 @@ const atrasado = computed(() =>
   dias.value !== null && dias.value < 0 &&
   props.p.status === 'aprovado'
 )
+
+// ── Localização do material ─────────────────────────────────────────────
+const LOCALIZACAO_LABELS = { armazenagem: 'Armazenagem', externa: 'Externa', cc: 'CC', estudio: 'Estúdio' }
+
+const localizacaoAberta  = ref(false)
+const subEstudioAberto   = ref(false)
+const salvandoLocalizacao= ref(false)
+
+// Concedente/solicitante ou admin podem definir a localização — não é uma
+// decisão de uma parte só, é operacional (mesma regra aplicada no backend
+// em LocalizacaoPedidoView, que recusa qualquer outra pessoa mesmo que a
+// requisição chegue direto na API).
+const podeEditarLocalizacao = computed(() => isMeSol.value || isMeCon.value || !!props.auth?.user?.is_staff)
+
+// MG "dono" do pedido pra filtrar os estúdios — o mesmo critério usado no
+// backend (mg_concedente tem prioridade, caindo pro mg_solicitante).
+const mgPedido     = computed(() => props.p.mg_concedente || props.p.mg_solicitante || '')
+const estudiosDoMg = computed(() => (props.estudios || []).filter(e => e.mg === mgPedido.value))
+
+const localizacaoLabel = computed(() => {
+  const tipo = props.p.localizacao_tipo
+  if (!tipo) return 'Definir localização'
+  if (tipo === 'estudio') {
+    return props.p.estudio_obj?.nome ? `Estúdio: ${props.p.estudio_obj.nome}` : 'Estúdio'
+  }
+  return LOCALIZACAO_LABELS[tipo] || tipo
+})
+
+async function selecionarLocalizacao(tipo, estudioId = null) {
+  if (salvandoLocalizacao.value) return
+  salvandoLocalizacao.value = true
+  try {
+    const dados = { localizacao_tipo: tipo }
+    if (tipo === 'estudio') dados.estudio_id = estudioId
+    const { data } = await pedidosApi.atualizarLocalizacao(props.p.id, dados)
+    emit('atualizarPedido', data)
+    localizacaoAberta.value = false
+    subEstudioAberto.value  = false
+  } catch (e) {
+    alert(e.response?.data?.detail || 'Não foi possível atualizar a localização.')
+  } finally {
+    salvandoLocalizacao.value = false
+  }
+}
 </script>

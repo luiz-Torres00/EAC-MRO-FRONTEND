@@ -65,6 +65,7 @@
             v-for="p in pedidosPagina" :key="p.id"
             :p="p"
             :auth="auth"
+            :estudios="estudios"
             @detalhe="modalDetalhe = $event"
             @aprovar="modalAprovar = $event"
             @recusar="modalRecusar = $event"
@@ -75,6 +76,7 @@
             @cobrar="modalCobranca = $event"
             @editar-numero="modalEditarNumero = $event"
             @excluir="excluirPedido"
+            @atualizar-pedido="atualizarPedidoLocal"
           />
         </div>
 
@@ -143,7 +145,7 @@
 import { ref, computed, watch, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
-import { pedidosApi } from '@/api'
+import { pedidosApi, estudiosApi } from '@/api'
 import PedidoCard      from '@/components/PedidoCard.vue'
 import Paginacao       from '@/components/Paginacao.vue'
 import ModalNovoPedido from '@/components/modals/ModalNovoPedido.vue'
@@ -173,6 +175,7 @@ const pagina          = ref(1)
 const itensPorPagina  = ref(12)
 
 const todosPedidos    = ref([])
+const estudios        = ref([])
 const loading         = ref(false)
 const error           = ref(null)
 
@@ -199,6 +202,18 @@ async function carregar() {
   } finally {
     loading.value = false
   }
+}
+
+async function carregarEstudios() {
+  try {
+    const { data } = await estudiosApi.listar()
+    estudios.value = Array.isArray(data) ? data : (data.results || [])
+  } catch { /* lista de estúdios é auxiliar — falha aqui não trava a tela */ }
+}
+
+function atualizarPedidoLocal(pedidoAtualizado) {
+  const i = todosPedidos.value.findIndex(p => p.id === pedidoAtualizado.id)
+  if (i !== -1) todosPedidos.value[i] = pedidoAtualizado
 }
 
 async function excluirPedido(p) {
@@ -249,7 +264,7 @@ const filtroExtraDescricao = computed(() => {
 })
 
 onMounted(async () => {
-  await carregar()
+  await Promise.all([carregar(), carregarEstudios()])
 
   const q = route.query
   let veioDeLink = false

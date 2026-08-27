@@ -2,9 +2,14 @@
   <div>
     <div class="section-header">
       <h3 style="font-size:14px;font-weight:700;color:var(--text)">Usuários & Permissões</h3>
-      <button v-if="auth.user?.is_staff" class="btn btn-primary btn-sm" @click="abrirNovoUsuario">
-        + Novo usuário
-      </button>
+      <div style="display:flex;gap:8px">
+        <button v-if="auth.user?.is_staff" class="btn btn-sm" @click="modalEstudios = true">
+          🔗 Vincular estúdios aos MGs
+        </button>
+        <button v-if="auth.user?.is_staff" class="btn btn-primary btn-sm" @click="abrirNovoUsuario">
+          + Novo usuário
+        </button>
+      </div>
     </div>
 
     <div v-if="loading" class="loading-full">Carregando…</div>
@@ -151,21 +156,66 @@
         </div>
       </div>
     </div>
+
+    <!-- Modal Vincular estúdios aos MGs -->
+    <div v-if="modalEstudios" class="modal-overlay" @click.self="modalEstudios = false">
+      <div class="modal-box" style="width:440px">
+        <h3 style="margin-bottom:16px">Vincular estúdios aos MGs</h3>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:14px">
+          Cadastre os estúdios que existem em cada MG. Ao marcar a localização de um empréstimo como "Estúdio",
+          só aparecem os estúdios do MG do próprio pedido.
+        </div>
+
+        <div v-for="mg in SETORES" :key="mg" style="margin-bottom:14px">
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--verde);margin-bottom:6px">
+            {{ mg }}
+          </div>
+          <div v-if="!estudiosPorMg[mg]?.length" style="font-size:11px;color:var(--muted);margin-bottom:6px">
+            Nenhum estúdio cadastrado ainda.
+          </div>
+          <div v-else style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:6px">
+            <div v-for="e in estudiosPorMg[mg]" :key="e.id" class="parte-chip" style="display:flex;align-items:center;gap:6px">
+              <span>{{ e.nome }}</span>
+              <button @click="excluirEstudio(e)" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:12px">✕</button>
+            </div>
+          </div>
+        </div>
+
+        <div style="display:flex;gap:8px;margin-top:8px;padding-top:12px;border-top:1px solid var(--border)">
+          <select v-model="novoEstudioMg" class="input" style="max-width:130px">
+            <option value="">MG —</option>
+            <option v-for="s in SETORES" :key="s" :value="s">{{ s }}</option>
+          </select>
+          <input v-model="novoEstudioNome" placeholder="Nome do estúdio…" class="input" style="flex:1" @keyup.enter="criarEstudio" />
+          <button class="btn btn-primary btn-sm" @click="criarEstudio" :disabled="salvandoEstudio">
+            {{ salvandoEstudio ? 'Salvando…' : '+ Adicionar' }}
+          </button>
+        </div>
+
+        <div style="display:flex;justify-content:flex-end;margin-top:16px">
+          <button class="btn btn-sm" @click="modalEstudios = false">Fechar</button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
-import { authApi } from '@/api'
+import { ref, reactive, computed, onMounted } from 'vue'
+import { authApi, estudiosApi } from '@/api'
 import { useAuthStore } from '@/stores/auth'
 import { useEscClose } from '@/composables/useEscClose'
 
 const auth = useAuthStore()
-useEscClose(() => { if (modalNovo.value) modalNovo.value = false })
+useEscClose(() => {
+  if (modalNovo.value) modalNovo.value = false
+  if (modalEstudios.value) modalEstudios.value = false
+})
 
 const usuarios     = ref([])
 const solicitacoes = ref([])
 const cargos       = ref([])
+const estudios     = ref([])
 const loading      = ref(false)
 const error        = ref(null)
 
@@ -190,18 +240,34 @@ const novo = reactive({ nome: '', sobrenome: '', email: '', password: '', matric
 
 const novoCargoNome = ref('')
 
+const modalEstudios   = ref(false)
+const salvandoEstudio = ref(false)
+const novoEstudioMg   = ref('')
+const novoEstudioNome = ref('')
+
+const estudiosPorMg = computed(() => {
+  const grupos = {}
+  for (const e of estudios.value) {
+    if (!grupos[e.mg]) grupos[e.mg] = []
+    grupos[e.mg].push(e)
+  }
+  return grupos
+})
+
 async function carregar() {
   loading.value = true
   error.value   = null
   try {
-    const [usRes, solRes, cargosRes] = await Promise.all([
+    const [usRes, solRes, cargosRes, estudiosRes] = await Promise.all([
       authApi.usuarios(),
       authApi.solicitacoes().catch(() => ({ data: [] })),
       authApi.cargos().catch(() => ({ data: [] })),
+      estudiosApi.listar().catch(() => ({ data: [] })),
     ])
     usuarios.value     = usRes.data
     solicitacoes.value = solRes.data
     cargos.value        = cargosRes.data
+    estudios.value       = Array.isArray(estudiosRes.data) ? estudiosRes.data : (estudiosRes.data.results || [])
   } catch (e) {
     error.value = e.message
   } finally {
@@ -257,6 +323,31 @@ async function criarCargo() {
     novoCargoNome.value = ''
   } catch (e) {
     alert('Erro ao criar cargo: ' + (e.response?.data?.nome?.[0] || e.message))
+  }
+}
+
+async function criarEstudio() {
+  if (!novoEstudioMg.value) { alert('Selecione o MG do estúdio.'); return }
+  if (!novoEstudioNome.value.trim()) { alert('Informe o nome do estúdio.'); return }
+  salvandoEstudio.value = true
+  try {
+    const { data } = await estudiosApi.criar({ mg: novoEstudioMg.value, nome: novoEstudioNome.value.trim() })
+    estudios.value.push(data)
+    novoEstudioNome.value = ''
+  } catch (e) {
+    alert('Erro ao criar estúdio: ' + (e.response?.data?.detail || e.response?.data?.nome?.[0] || e.message))
+  } finally {
+    salvandoEstudio.value = false
+  }
+}
+
+async function excluirEstudio(e) {
+  if (!confirm(`Remover o estúdio "${e.nome}" (${e.mg})?`)) return
+  try {
+    await estudiosApi.deletar(e.id)
+    estudios.value = estudios.value.filter(x => x.id !== e.id)
+  } catch (err) {
+    alert('Erro ao remover: ' + (err.response?.data?.detail || err.message))
   }
 }
 

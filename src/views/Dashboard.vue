@@ -219,7 +219,18 @@ const LABEL_STATUS = {
 
 function fmtData(iso) {
   if (!iso) return '—'
-  try { return new Date(iso).toLocaleDateString('pt-BR') } catch { return '—' }
+  try {
+    // Datas "puras" (sem hora, tipo "2026-08-27", vindas do calendário de
+    // filtro) o JS interpreta como UTC-meia-noite — em fuso atrás de UTC
+    // (Brasil) isso mostrava um dia a menos (27 virava 26). Monta a data
+    // direto pelos números, sem passar por interpretação de fuso.
+    const soData = /^\d{4}-\d{2}-\d{2}$/.test(iso)
+    if (soData) {
+      const [y, m, d] = iso.split('-').map(Number)
+      return new Date(y, m - 1, d).toLocaleDateString('pt-BR')
+    }
+    return new Date(iso).toLocaleDateString('pt-BR')
+  } catch { return '—' }
 }
 
 function diasAtraso(devIso) {

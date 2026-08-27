@@ -136,6 +136,7 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { pedidosApi } from '@/api'
+import { useEscClose } from '@/composables/useEscClose'
 
 const props = defineProps({ p: Object, auth: Object, estudios: { type: Array, default: () => [] } })
 const emit  = defineEmits(['detalhe','aprovar','recusar','devolver','confirmarDevolucao','estender','ocorrencia','cobrar','editarNumero','excluir','atualizarPedido'])
@@ -205,9 +206,11 @@ const salvandoLocalizacao= ref(false)
 // requisição chegue direto na API).
 const podeEditarLocalizacao = computed(() => isMeSol.value || isMeCon.value || !!props.auth?.user?.is_staff)
 
-// MG "dono" do pedido pra filtrar os estúdios — o mesmo critério usado no
-// backend (mg_concedente tem prioridade, caindo pro mg_solicitante).
-const mgPedido     = computed(() => props.p.mg_concedente || props.p.mg_solicitante || '')
+// MG "dono" do pedido pra filtrar os estúdios — o material fica em posse do
+// SOLICITANTE, então é o MG dele que importa (mg_concedente só como
+// fallback pra registros antigos sem mg_solicitante preenchido). Mesmo
+// critério usado no backend (LocalizacaoPedidoView).
+const mgPedido     = computed(() => props.p.mg_solicitante || props.p.mg_concedente || '')
 const estudiosDoMg = computed(() => (props.estudios || []).filter(e => e.mg === mgPedido.value))
 
 const localizacaoLabel = computed(() => {
@@ -217,6 +220,15 @@ const localizacaoLabel = computed(() => {
     return props.p.estudio_obj?.nome ? `Estúdio: ${props.p.estudio_obj.nome}` : 'Estúdio'
   }
   return LOCALIZACAO_LABELS[tipo] || tipo
+})
+
+// Esc primeiro volta do submenu de estúdios pro menu principal (se estiver
+// aberto), e só fecha o dropdown inteiro se já estiver no menu principal —
+// mesmo padrão usado no lightbox de fotos do ModalDetalhe.
+useEscClose(() => {
+  if (!localizacaoAberta.value) return
+  if (subEstudioAberto.value) { subEstudioAberto.value = false; return }
+  localizacaoAberta.value = false
 })
 
 async function selecionarLocalizacao(tipo, estudioId = null) {

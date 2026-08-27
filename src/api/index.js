@@ -52,6 +52,7 @@ export const authApi = {
   aprovarSolic:  id       => api.post(`/auth/solicitacoes/${id}/aprovar/`),
   recusarSolic:  id       => api.post(`/auth/solicitacoes/${id}/recusar/`),
   atualizarUsuario: (id, dados) => api.patch(`/auth/usuarios/${id}/`, dados),
+  deletarUsuario: id      => api.delete(`/auth/usuarios/${id}/`),
   criarUsuario: (dados)   => api.post('/auth/usuarios/criar/', dados),
   cargos:       ()        => api.get('/auth/cargos/'),
   criarCargo:   (dados)   => api.post('/auth/cargos/', dados),

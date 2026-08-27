@@ -75,6 +75,9 @@
             <button v-if="auth.user?.is_staff" class="btn btn-sm" @click="toggleEdicao(u)">
               {{ editando === u.id ? 'Fechar' : 'Editar' }}
             </button>
+            <button v-if="auth.user?.is_staff && u.id !== auth.user?.id" class="btn btn-sm" style="color:var(--red)" @click="removerUsuario(u)" title="Remove o usuário e todos os acessos dele do sistema">
+              🗑 Remover
+            </button>
           </div>
         </div>
 
@@ -127,7 +130,7 @@
           <input v-model="novo.sobrenome" placeholder="Sobrenome" class="input" />
           <input v-model="novo.email" placeholder="E-mail" class="input" type="email" />
           <input v-model="novo.password" placeholder="Senha provisória" class="input" type="password" />
-          <input v-model="novo.matricula" placeholder="Matrícula" class="input" />
+          <input v-model="novo.matricula" placeholder="Matrícula" class="input" @input="onMatriculaInput" inputmode="numeric" pattern="[0-9]*" />
           <select v-model="novo.setor" class="input">
             <option value="">Setor —</option>
             <option v-for="s in SETORES" :key="s" :value="s">{{ s }}</option>
@@ -254,6 +257,23 @@ async function criarCargo() {
     novoCargoNome.value = ''
   } catch (e) {
     alert('Erro ao criar cargo: ' + (e.response?.data?.nome?.[0] || e.message))
+  }
+}
+
+// Matrícula só aceita números — mesma restrição da tela de login.
+function onMatriculaInput(e) {
+  const limpo = e.target.value.replace(/\D/g, '')
+  novo.matricula = limpo
+  if (e.target.value !== limpo) e.target.value = limpo
+}
+
+async function removerUsuario(u) {
+  if (!confirm(`Remover ${u.nome} ${u.sobrenome} (${u.email})?\n\nIsso apaga o usuário do banco de dados — credenciais e acessos deixam de existir. Essa ação não pode ser desfeita.`)) return
+  try {
+    await authApi.deletarUsuario(u.id)
+    usuarios.value = usuarios.value.filter(x => x.id !== u.id)
+  } catch (e) {
+    alert('Erro ao remover: ' + (e.response?.data?.detail || e.message))
   }
 }
 

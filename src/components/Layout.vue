@@ -48,6 +48,9 @@
           class="nav-item" :class="{ active: route.path === '/usuarios' }" title="Usuários">
           <IconUsuarios />
           <span class="nav-label sidebar-collapsible">Usuários</span>
+          <span v-if="pendingSolicitacoes" class="notif-badge amber" title="Solicitações de acesso aguardando aprovação">
+            {{ pendingSolicitacoes > 9 ? '9+' : pendingSolicitacoes }}
+          </span>
         </RouterLink>
       </nav>
 
@@ -98,7 +101,7 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { RouterLink, RouterView, useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useTheme } from '@/composables/useTheme'
-import { notifApi } from '@/api'
+import { notifApi, authApi } from '@/api'
 
 const auth     = useAuthStore()
 const route    = useRoute()
@@ -166,12 +169,32 @@ async function checarNotificacoes() {
   }
 }
 
+// ── Solicitações de acesso pendentes: badge no item "Usuários" ─────────────
+// Só quem é admin de fato vê essa contagem (a rota de solicitações no
+// backend já é IsAdminUser — pra quem não é admin isso simplesmente não
+// dispara, pra não gastar requisição à toa nem estourar 403 no console).
+const pendingSolicitacoes = ref(0)
+let pollerSolic = null
+
+async function checarSolicitacoes() {
+  if (!auth.isAuthenticated || !auth.user?.is_staff) return
+  try {
+    const res = await authApi.solicitacoes()
+    pendingSolicitacoes.value = res.data.length
+  } catch {
+    // silencioso — mesma lógica do polling de notificações
+  }
+}
+
 onMounted(() => {
   checarNotificacoes()
   poller = setInterval(checarNotificacoes, 20000)
+  checarSolicitacoes()
+  pollerSolic = setInterval(checarSolicitacoes, 20000)
 })
 onUnmounted(() => {
   if (poller) clearInterval(poller)
+  if (pollerSolic) clearInterval(pollerSolic)
 })
 </script>
 

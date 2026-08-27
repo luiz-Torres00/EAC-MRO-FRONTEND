@@ -222,6 +222,7 @@ body {
   border-radius: 99px; padding: 3px 6px;
   min-width: 16px; text-align: center;
 }
+.notif-badge.amber { background: var(--amber); }
 
 .sidebar-footer {
   margin-top: auto; padding: 14px 20px;
@@ -785,9 +786,11 @@ body.light .field textarea { background: #f5f7fc; border-color: #dde2f0; color: 
    LOGIN
 ══════════════════════════════════════ */
 .login-wrap {
-  min-height: 100vh;
+  height: 100vh;
+  overflow-y: auto;
   display: flex;
   align-items: center;
+  align-items: safe center;
   justify-content: center;
   background: radial-gradient(ellipse at 50% 0%, #152040 0%, var(--bg) 65%);
   padding: 20px;
@@ -802,6 +805,7 @@ body.light .field textarea { background: #f5f7fc; border-color: #dde2f0; color: 
   border-radius: var(--radius-lg);
   padding: 36px 32px;
   box-shadow: var(--shadow-lg), 0 0 60px rgba(0,206,124,.06);
+  margin: auto;
 }
 
 .login-logo {

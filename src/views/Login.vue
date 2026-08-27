@@ -68,7 +68,7 @@
         </div>
         <div class="login-field">
           <label>Matrícula</label>
-          <input v-model="solic.matricula" required />
+          <input v-model="solic.matricula" @input="onMatriculaInput" inputmode="numeric" pattern="[0-9]*" required />
         </div>
         <div class="login-field">
           <label>Senha</label>
@@ -138,6 +138,14 @@ const solic = reactive({
 
 const setores = ['MG1','MG2','MG3','MG4','Cenografia','Arte']
 const cargos  = ['Aux. Almoxarifado','Almoxarife','Encarregado','Supervisor','Coordenador','Gerente','Gerente Geral']
+
+// Matrícula só aceita números — filtra qualquer outro caractere na hora
+// que a pessoa digita (o backend valida de novo, não confia só nisso aqui).
+function onMatriculaInput(e) {
+  const limpo = e.target.value.replace(/\D/g, '')
+  solic.matricula = limpo
+  if (e.target.value !== limpo) e.target.value = limpo
+}
 
 async function handleLogin() {
   erro.value = ''; busy.value = true

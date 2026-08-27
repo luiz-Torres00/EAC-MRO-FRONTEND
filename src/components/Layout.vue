@@ -20,9 +20,9 @@
       <div class="sidebar-app-label sidebar-collapsible">Sistema</div>
 
       <nav class="nav-list">
-        <RouterLink to="/" end class="nav-item" :class="{ active: route.path === '/' }" title="Controle EAC">
+        <RouterLink to="/" end class="nav-item" :class="{ active: route.path === '/' }" title="Controle Empréstimos">
           <IconEAC />
-          <span class="nav-label sidebar-collapsible">EAC</span>
+          <span class="nav-label sidebar-collapsible">Empréstimos</span>
         </RouterLink>
 
         <RouterLink v-if="auth.perm('notif_ver')" to="/notificacoes"
@@ -111,7 +111,7 @@ const collapsed = ref(false)
 const { theme, alternar: alternarTema } = useTheme()
 
 const TITLES = {
-  '/':             'Controle EAC — Empréstimos',
+  '/':             'Controle Empréstimos',
   '/relatorios':   'Relatórios',
   '/dashboard':    'Dashboard',
   '/usuarios':     'Usuários & Permissões',

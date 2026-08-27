@@ -50,7 +50,7 @@
             <div class="info-value">{{ fmtData(pedido.dev_iso) }}</div>
           </div>
           <div v-if="pedido.codigo">
-            <div class="info-label">Código EAC</div>
+            <div class="info-label">Código Empréstimos</div>
             <div class="info-value">{{ pedido.codigo }}</div>
           </div>
           <div v-if="pedido.numero_pedido">

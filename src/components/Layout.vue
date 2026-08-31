@@ -85,12 +85,31 @@
         </div>
       </div>
 
-      <div class="content">
-        <RouterView v-slot="{ Component }">
-          <Transition name="page-fade" mode="out-in">
-            <component :is="Component" />
-          </Transition>
-        </RouterView>
+      <div class="content" ref="contentEl" @scroll="onContentScroll"
+        @touchstart="onPullStart" @touchmove="onPullMove" @touchend="onPullEnd">
+        <!-- "Puxar para atualizar": dentro do app instalado não existe botão
+             de recarregar como num navegador comum, então isso vira o jeito
+             natural de buscar dados novos (pedido aprovado por outra pessoa,
+             lembrete novo, etc.) sem precisar fechar e abrir o app de novo. -->
+        <div class="pull-refresh" :style="{ height: (refreshing ? 40 : pullDistance) + 'px' }">
+          <span v-if="refreshing" class="pull-refresh-icon spin">🔄</span>
+          <template v-else-if="pullDistance > 0">
+            <span class="pull-refresh-icon" :class="{ pronto: pullDistance >= PULL_LIMIAR }">↓</span>
+            {{ pullDistance >= PULL_LIMIAR ? 'Solte para atualizar' : 'Puxe para atualizar' }}
+          </template>
+        </div>
+
+        <div class="pull-refresh-body" :style="{ transform: 'translateY(' + (refreshing ? 40 : pullDistance) + 'px)' }">
+          <RouterView v-slot="{ Component }">
+            <Transition name="page-fade" mode="out-in">
+              <component :is="Component" />
+            </Transition>
+          </RouterView>
+        </div>
+
+        <button v-show="showBackToTop" type="button" class="back-to-top" title="Voltar ao topo" @click="scrollToTop">
+          <IconTopo />
+        </button>
       </div>
     </div>
   </div>
@@ -107,6 +126,52 @@ const auth     = useAuthStore()
 const route    = useRoute()
 const router   = useRouter()
 const collapsed = ref(false)
+
+// ── Área de conteúdo: "voltar ao topo" + "puxar para atualizar" (celular) ──
+const contentEl = ref(null)
+
+const showBackToTop = ref(false)
+function onContentScroll() {
+  showBackToTop.value = !!contentEl.value && contentEl.value.scrollTop > 400
+}
+function scrollToTop() {
+  contentEl.value?.scrollTo({ top: 0, behavior: 'smooth' })
+}
+
+const PULL_LIMIAR = 60
+const PULL_MAX = 90
+const pullDistance = ref(0)
+const refreshing = ref(false)
+let pullStartY = 0
+let puxando = false
+
+function onPullStart(e) {
+  if (refreshing.value || e.touches.length !== 1) { puxando = false; return }
+  // só começa a "escutar" o puxão quando a lista já está no topo — senão
+  // isso ia atrapalhar quem só está rolando a tela pra baixo
+  if (!contentEl.value || contentEl.value.scrollTop > 0) { puxando = false; return }
+  pullStartY = e.touches[0].clientY
+  puxando = true
+}
+function onPullMove(e) {
+  if (!puxando || refreshing.value) return
+  const dy = e.touches[0].clientY - pullStartY
+  if (dy <= 0) { pullDistance.value = 0; return }
+  pullDistance.value = Math.min(dy * 0.5, PULL_MAX)
+}
+function onPullEnd() {
+  if (!puxando || refreshing.value) return
+  puxando = false
+  if (pullDistance.value >= PULL_LIMIAR) {
+    refreshing.value = true
+    pullDistance.value = 0
+    // Recarrega o app inteiro — o "esqueleto" (HTML/JS/CSS) vem do cache
+    // do PWA na hora, só os dados da API são buscados de novo.
+    setTimeout(() => window.location.reload(), 300)
+  } else {
+    pullDistance.value = 0
+  }
+}
 
 const { theme, alternar: alternarTema } = useTheme()
 
@@ -246,6 +311,12 @@ const IconSair = defineComponent({
     h('line',{ x1:'21', y1:'12', x2:'9', y2:'12' }),
   ])
 })
+const IconTopo = defineComponent({
+  render: () => h('svg', { width:'16', height:'16', viewBox:'0 0 24 24', fill:'none', stroke:'currentColor', strokeWidth:'2.2', strokeLinecap:'round', strokeLinejoin:'round' }, [
+    h('line',{ x1:'12', y1:'19', x2:'12', y2:'5' }),
+    h('polyline',{ points:'5 12 12 5 19 12' }),
+  ])
+})
 const IconChevron = defineComponent({
   render: () => h('svg', { width:'14', height:'14', viewBox:'0 0 24 24', fill:'none', stroke:'currentColor', strokeWidth:'2.2', strokeLinecap:'round', strokeLinejoin:'round' }, [
     h('polyline',{ points:'15 18 9 12 15 6' }),
@@ -279,7 +350,7 @@ const LogoMRO = defineComponent({
   ])
 })
 
-export { IconEAC, IconRelatorios, IconUsuarios, IconNotif, IconSair, IconChevron, IconSol, IconLua, LogoMRO }
+export { IconEAC, IconRelatorios, IconUsuarios, IconNotif, IconSair, IconChevron, IconSol, IconLua, IconTopo, LogoMRO }
 </script>
 
 <style scoped>
@@ -319,4 +390,35 @@ export { IconEAC, IconRelatorios, IconUsuarios, IconNotif, IconSair, IconChevron
 .page-fade-enter-active, .page-fade-leave-active { transition: opacity .18s ease, transform .18s ease; }
 .page-fade-enter-from { opacity: 0; transform: translateY(6px); }
 .page-fade-leave-to   { opacity: 0; transform: translateY(-6px); }
+
+/* ── "Puxar para atualizar" ── */
+.pull-refresh {
+  overflow: hidden;
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  font-size: 11px; font-weight: 700; color: var(--muted);
+  height: 0;
+}
+.pull-refresh-icon { display: inline-flex; transition: transform .15s ease; }
+.pull-refresh-icon.pronto { transform: rotate(180deg); color: var(--verde); }
+.pull-refresh-icon.spin { animation: pull-refresh-spin .7s linear infinite; }
+@keyframes pull-refresh-spin { to { transform: rotate(360deg); } }
+.pull-refresh-body { will-change: transform; }
+
+/* ── Voltar ao topo (some por padrão — só aparece no celular, e só quando
+   já rolou bastante a tela) ── */
+.back-to-top {
+  display: none;
+  position: fixed;
+  right: 16px;
+  z-index: 90;
+  width: 42px; height: 42px;
+  align-items: center; justify-content: center;
+  background: var(--verde); color: #06251a;
+  border: none; border-radius: 50%;
+  box-shadow: var(--shadow-lg);
+  cursor: pointer;
+}
+@media (max-width: 720px) {
+  .back-to-top { display: flex; bottom: calc(78px + env(safe-area-inset-bottom)); }
+}
 </style>

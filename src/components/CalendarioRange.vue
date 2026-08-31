@@ -10,22 +10,26 @@
       <span v-for="d in DIAS_SEMANA" :key="d">{{ d }}</span>
     </div>
 
-    <div class="cal-grid">
-      <button
-        v-for="(dia, i) in dias" :key="i"
-        type="button"
-        class="cal-dia"
-        :class="{
-          'fora-do-mes': !dia.noMes,
-          'in-range': dia.emIntervalo,
-          'is-inicio': dia.ehInicio,
-          'is-fim': dia.ehFim,
-          'hoje': dia.hoje,
-        }"
-        @click="clicarDia(dia)"
-      >
-        {{ dia.dia }}
-      </button>
+    <div class="cal-grid" @touchstart="onTouchStart" @touchmove="onTouchMove" @touchend="onTouchEnd">
+      <Transition :name="slideDir === 'esq' ? 'cal-slide-esq' : 'cal-slide-dir'" mode="out-in">
+        <div class="cal-grid-inner" :key="anoAtual + '-' + mesAtual">
+          <button
+            v-for="(dia, i) in dias" :key="i"
+            type="button"
+            class="cal-dia"
+            :class="{
+              'fora-do-mes': !dia.noMes,
+              'in-range': dia.emIntervalo,
+              'is-inicio': dia.ehInicio,
+              'is-fim': dia.ehFim,
+              'hoje': dia.hoje,
+            }"
+            @click="clicarDia(dia)"
+          >
+            {{ dia.dia }}
+          </button>
+        </div>
+      </Transition>
     </div>
 
     <div v-if="inicio || fim" class="cal-resumo">
@@ -55,11 +59,49 @@ const anoAtual = ref(base.getFullYear())
 
 const nomeMes = computed(() => MESES[mesAtual.value])
 
+// Direção da última troca de mês, usada só pra escolher a animação de
+// slide (não muda nenhuma lógica de datas).
+const slideDir = ref('dir')
+
 function mesAnterior() {
+  slideDir.value = 'dir'
   if (mesAtual.value === 0) { mesAtual.value = 11; anoAtual.value-- } else { mesAtual.value-- }
 }
 function mesSeguinte() {
+  slideDir.value = 'esq'
   if (mesAtual.value === 11) { mesAtual.value = 0; anoAtual.value++ } else { mesAtual.value++ }
+}
+
+// ── Arrastar o dedo pro lado troca de mês (celular) ──────────────────────
+// Só reage quando o gesto é bem mais horizontal que vertical, pra não
+// atrapalhar quem só quer rolar a tela passando o dedo por cima do
+// calendário.
+let touchStartX = 0, touchStartY = 0, arrastando = false
+const LIMIAR_SWIPE = 40
+
+function onTouchStart(e) {
+  if (e.touches.length !== 1) return
+  touchStartX = e.touches[0].clientX
+  touchStartY = e.touches[0].clientY
+  arrastando = true
+}
+function onTouchMove(e) {
+  if (!arrastando) return
+  const dx = e.touches[0].clientX - touchStartX
+  const dy = e.touches[0].clientY - touchStartY
+  // Uma vez que fica claro que é um gesto horizontal, segura o scroll da
+  // página pra o arrasto ficar "preso" ao calendário até soltar o dedo.
+  if (Math.abs(dx) > 12 && Math.abs(dx) > Math.abs(dy)) e.preventDefault()
+}
+function onTouchEnd(e) {
+  if (!arrastando) return
+  arrastando = false
+  const touch = e.changedTouches[0]
+  const dx = touch.clientX - touchStartX
+  const dy = touch.clientY - touchStartY
+  if (Math.abs(dx) > LIMIAR_SWIPE && Math.abs(dx) > Math.abs(dy) * 1.5) {
+    if (dx < 0) mesSeguinte(); else mesAnterior()
+  }
 }
 
 function toIso(date) {
@@ -135,7 +177,18 @@ function limpar() {
 }
 .cal-nav:hover { border-color: var(--verde); color: var(--verde); }
 .cal-semana { display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; font-size: 10px; color: var(--muted); margin-bottom: 4px; }
-.cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+.cal-grid { overflow: hidden; touch-action: pan-y; }
+.cal-grid-inner { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+
+/* Anima a troca de mês (clique nas setas ou arrastar o dedo) */
+.cal-slide-esq-enter-active, .cal-slide-esq-leave-active,
+.cal-slide-dir-enter-active, .cal-slide-dir-leave-active {
+  transition: transform .18s ease, opacity .18s ease;
+}
+.cal-slide-esq-enter-from { transform: translateX(24px); opacity: 0; }
+.cal-slide-esq-leave-to   { transform: translateX(-24px); opacity: 0; }
+.cal-slide-dir-enter-from { transform: translateX(-24px); opacity: 0; }
+.cal-slide-dir-leave-to   { transform: translateX(24px); opacity: 0; }
 .cal-dia {
   background: transparent; border: none; color: var(--text); font-size: 11px;
   padding: 6px 0; cursor: pointer; border-radius: 6px; position: relative;

@@ -1271,3 +1271,134 @@ body.light .field textarea { background: #f5f7fc; border-color: #dde2f0; color: 
   flex-shrink: 0;
 }
 .anexo-pdf-remove:hover { color: var(--red); }
+
+/* ══════════════════════════════════════
+   PWA / MOBILE (iOS + Android) — 31/ago/2026
+   Não muda nenhuma tela .vue: a MESMA sidebar de sempre vira uma barra de
+   navegação inferior (padrão de app) em telas estreitas — é só o CSS que
+   reorganiza o layout no breakpoint. Modais, formulários, tabelas e grids
+   também se ajustam pra caber sem cortar nada.
+══════════════════════════════════════ */
+
+body {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+/* 100dvh acompanha a barra de endereço do navegador do celular (some ao
+   rolar) — sem isso, 100vh no iOS/Android deixa uma sobra ou um corte de
+   layout quando a barra aparece/some. Em navegador que não suporta, cai no
+   100vh de sempre. */
+@supports (height: 100dvh) {
+  body, .app, .login-wrap { height: 100dvh; }
+}
+
+/* Área segura do iPhone (notch/ilha dinâmica e barra de gestos embaixo) —
+   nos elementos que encostam nas bordas da tela. Em Android e desktop os
+   env(safe-area-inset-*) resolvem pra 0 e não mudam nada. */
+.sidebar-footer { padding-bottom: calc(14px + env(safe-area-inset-bottom)); }
+.topbar { padding-top: env(safe-area-inset-top); }
+
+/* Tabelas de Dashboard/Relatórios: rolagem horizontal própria em vez de
+   estourar a largura da tela em telas estreitas (aplica sempre, não só no
+   celular — não muda nada em telas largas, onde nunca estoura). */
+.dash-card { overflow-x: auto; }
+
+@media (max-width: 720px) {
+  /* ── Sidebar vira barra de navegação inferior ── */
+  .app { display: block; }
+  .sidebar {
+    position: fixed; left: 0; right: 0; bottom: 0; top: auto;
+    width: 100% !important; height: auto;
+    flex-direction: row;
+    border-right: none;
+    border-top: 1px solid var(--border-s);
+    padding-bottom: env(safe-area-inset-bottom);
+    z-index: 100;
+    transition: none;
+  }
+  .sidebar-toggle-btn,
+  .sidebar-brand,
+  .sidebar-app-label,
+  .sidebar-footer {
+    display: none;
+  }
+  .nav-list {
+    flex-direction: row;
+    justify-content: space-around;
+    align-items: center;
+    padding: 4px 2px;
+    gap: 0;
+    overflow: visible;
+  }
+  .nav-item {
+    flex-direction: column;
+    gap: 3px;
+    flex: 1;
+    padding: 6px 2px 5px;
+    border-left: none !important;
+    border-radius: var(--radius-sm);
+    text-align: center;
+  }
+  .nav-item svg { width: 19px; height: 19px; }
+  .nav-label { font-size: 9.5px; white-space: normal; line-height: 1.1; }
+  .nav-item.active { border: none; background: var(--verde-dim); }
+  .notif-badge { top: 0; right: 14%; }
+
+  /* ── Conteúdo ocupa a tela toda, com espaço embaixo pra não ficar atrás
+     da barra de navegação ── */
+  .main { width: 100%; }
+  .topbar { padding: 0 16px; height: 52px; }
+  .topbar-date { display: none; }
+  .content {
+    padding: 16px;
+    padding-bottom: calc(78px + env(safe-area-inset-bottom));
+  }
+
+  /* ── Modais viram "bottom sheet" (sobem da base da tela), mais natural
+     de usar com o dedo do que um modal centralizado pequeno ── */
+  .overlay { align-items: flex-end; padding: 0; }
+  .modal {
+    max-width: 100%; width: 100%;
+    max-height: 88vh;
+    border-radius: 16px 16px 0 0;
+    animation: sheetIn 220ms var(--ease) both;
+  }
+  @keyframes sheetIn {
+    from { transform: translateY(100%); }
+    to   { transform: translateY(0); }
+  }
+  .modal-header { padding: 16px 18px 12px; }
+  .modal-body   { padding: 16px 18px; }
+  .modal-footer {
+    padding: 12px 18px calc(12px + env(safe-area-inset-bottom));
+    flex-wrap: wrap;
+  }
+  .modal-footer .btn { flex: 1; justify-content: center; }
+
+  /* ── Formulários: um campo por linha, mais fácil de tocar ── */
+  .field-row { grid-template-columns: 1fr; }
+  .detalhe-partes { grid-template-columns: 1fr; }
+  .detalhe-arrow { transform: rotate(90deg); }
+
+  /* ── Grids do Dashboard/Relatórios mais estreitos ── */
+  .kpi-row { grid-template-columns: repeat(2, 1fr); }
+  .dash-grid { grid-template-columns: 1fr; }
+  .dash-grid > [style*="grid-column"] { grid-column: auto !important; }
+
+  /* ── Alvo de toque maior nos botões (recomendação de acessibilidade —
+     mínimo 40-44px de altura pro dedo acertar sem esforço) ── */
+  .btn { min-height: 40px; }
+  .btn-sm { min-height: 36px; }
+  .pedido-actions .btn { flex: 1 1 auto; justify-content: center; }
+
+  .login-card { padding: 28px 22px; }
+}
+
+/* Barra de navegação inferior: em telas muito estreitas (celulares
+   pequenos), tira o texto embaixo do ícone e sobra só o ícone, senão os
+   5 itens ficam espremidos demais. */
+@media (max-width: 380px) {
+  .nav-label { display: none; }
+  .nav-item { padding: 9px 2px; }
+}

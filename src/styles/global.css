@@ -1393,6 +1393,18 @@ body {
   .pedido-actions .btn { flex: 1 1 auto; justify-content: center; }
 
   .login-card { padding: 28px 22px; }
+
+  /* ── Abas (Todos/Pendentes/Aprovados/Devolucoes/Recusados): em vez de
+     cortar as ultimas sem aviso, a faixa toda rola de lado com o dedo. O
+     botao "Novo pedido" desce pra segunda linha se nao couber junto. ── */
+  .section-header { flex-wrap: wrap; gap: 10px; }
+  .module-tabs {
+    width: 100%; max-width: 100%;
+    overflow-x: auto; -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin; scrollbar-color: var(--border) transparent;
+  }
+  .module-tabs::-webkit-scrollbar { height: 6px; }
+  .module-tabs::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
 }
 
 /* Barra de navegação inferior: em telas muito estreitas (celulares

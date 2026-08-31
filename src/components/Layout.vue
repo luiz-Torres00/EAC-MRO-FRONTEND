@@ -99,7 +99,8 @@
           </template>
         </div>
 
-        <div class="pull-refresh-body" :style="{ transform: 'translateY(' + (refreshing ? 40 : pullDistance) + 'px)' }">
+        <div class="pull-refresh-body" :class="{ 'is-pulling': refreshing || pullDistance > 0 }"
+          :style="{ transform: (refreshing || pullDistance > 0) ? ('translateY(' + (refreshing ? 40 : pullDistance) + 'px)') : 'none' }">
           <RouterView v-slot="{ Component }">
             <Transition name="page-fade" mode="out-in">
               <component :is="Component" />
@@ -402,7 +403,12 @@ export { IconEAC, IconRelatorios, IconUsuarios, IconNotif, IconSair, IconChevron
 .pull-refresh-icon.pronto { transform: rotate(180deg); color: var(--verde); }
 .pull-refresh-icon.spin { animation: pull-refresh-spin .7s linear infinite; }
 @keyframes pull-refresh-spin { to { transform: rotate(360deg); } }
-.pull-refresh-body { will-change: transform; }
+/* will-change fica só enquanto realmente está puxando/atualizando — se
+   ficasse fixo o tempo todo (mesmo sem nenhum arrasto acontecendo), ele
+   sozinho já faz esta div virar a referência de posição de qualquer modal
+   com "position: fixed" lá dentro (overlay de "Novo pedido" etc.), fazendo
+   o modal abrir grudado no fim da página em vez de centralizado na tela. */
+.pull-refresh-body.is-pulling { will-change: transform; }
 
 /* ── Voltar ao topo (some por padrão — só aparece no celular, e só quando
    já rolou bastante a tela) ── */

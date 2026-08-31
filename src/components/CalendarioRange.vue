@@ -11,25 +11,23 @@
     </div>
 
     <div class="cal-grid" @touchstart="onTouchStart" @touchmove="onTouchMove" @touchend="onTouchEnd">
-      <Transition :name="slideDir === 'esq' ? 'cal-slide-esq' : 'cal-slide-dir'" mode="out-in">
-        <div class="cal-grid-inner" :key="anoAtual + '-' + mesAtual">
-          <button
-            v-for="(dia, i) in dias" :key="i"
-            type="button"
-            class="cal-dia"
-            :class="{
-              'fora-do-mes': !dia.noMes,
-              'in-range': dia.emIntervalo,
-              'is-inicio': dia.ehInicio,
-              'is-fim': dia.ehFim,
-              'hoje': dia.hoje,
-            }"
-            @click="clicarDia(dia)"
-          >
-            {{ dia.dia }}
-          </button>
-        </div>
-      </Transition>
+      <div class="cal-grid-inner">
+        <button
+          v-for="(dia, i) in dias" :key="i"
+          type="button"
+          class="cal-dia"
+          :class="{
+            'fora-do-mes': !dia.noMes,
+            'in-range': dia.emIntervalo,
+            'is-inicio': dia.ehInicio,
+            'is-fim': dia.ehFim,
+            'hoje': dia.hoje,
+          }"
+          @click="clicarDia(dia)"
+        >
+          {{ dia.dia }}
+        </button>
+      </div>
     </div>
 
     <div v-if="inicio || fim" class="cal-resumo">
@@ -59,16 +57,10 @@ const anoAtual = ref(base.getFullYear())
 
 const nomeMes = computed(() => MESES[mesAtual.value])
 
-// Direção da última troca de mês, usada só pra escolher a animação de
-// slide (não muda nenhuma lógica de datas).
-const slideDir = ref('dir')
-
 function mesAnterior() {
-  slideDir.value = 'dir'
   if (mesAtual.value === 0) { mesAtual.value = 11; anoAtual.value-- } else { mesAtual.value-- }
 }
 function mesSeguinte() {
-  slideDir.value = 'esq'
   if (mesAtual.value === 11) { mesAtual.value = 0; anoAtual.value++ } else { mesAtual.value++ }
 }
 
@@ -179,16 +171,6 @@ function limpar() {
 .cal-semana { display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; font-size: 10px; color: var(--muted); margin-bottom: 4px; }
 .cal-grid { overflow: hidden; touch-action: pan-y; }
 .cal-grid-inner { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
-
-/* Anima a troca de mês (clique nas setas ou arrastar o dedo) */
-.cal-slide-esq-enter-active, .cal-slide-esq-leave-active,
-.cal-slide-dir-enter-active, .cal-slide-dir-leave-active {
-  transition: transform .18s ease, opacity .18s ease;
-}
-.cal-slide-esq-enter-from { transform: translateX(24px); opacity: 0; }
-.cal-slide-esq-leave-to   { transform: translateX(-24px); opacity: 0; }
-.cal-slide-dir-enter-from { transform: translateX(-24px); opacity: 0; }
-.cal-slide-dir-leave-to   { transform: translateX(24px); opacity: 0; }
 .cal-dia {
   background: transparent; border: none; color: var(--text); font-size: 11px;
   padding: 6px 0; cursor: pointer; border-radius: 6px; position: relative;

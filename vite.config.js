@@ -10,6 +10,10 @@ export default defineConfig({
     // ver anotações completas em claude/eac-mro-notas.md do projeto.
     VitePWA({
       registerType: 'autoUpdate',
+      // O registro do service worker agora e feito manualmente no main.js,
+      // pra poder recarregar a pagina sozinho quando sair uma versao nova
+      // (evita ficar com uma mistura de codigo antigo + arquivos novos).
+      injectRegister: false,
       includeAssets: ['favicon-32.png', 'apple-touch-icon.png'],
       manifest: {
         name: 'EAC MRO — Controle de Empréstimos',
